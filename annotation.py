@@ -7,26 +7,51 @@ import preprocessing
 import json
 
 
+# OLD
+# def compare_two_plans(json_qep, json_aqp):
+#   global diff_idx
+#   qp = preprocessing.QueryPlans()
+#   root_node_aqp, _ = qp.extract_qp_data(json_aqp)
+#   reset_vars()
+#   convert_qp_to_text(root_node_aqp)
 
-def compare_two_plans(json_qep, json_aqp):
+#   root_node_qep, _ = qp.extract_qp_data(json_qep)
+#   reset_vars()
+#   convert_qp_to_text(root_node_qep)
+
+#   diff_idx=1
+#   difference = []
+#   reasons = []
+#   compare_children_nodes(root_node_aqp, root_node_qep, difference, reasons)
+#   diff_str = ""
+#   for i in range (len(reasons)):
+
+#     diff_str = diff_str + difference[i] + "\n"
+#     if reasons[i] != "":
+#       diff_str = diff_str + reasons[i] + "\n"
+
+#   return diff_str
+
+
+def compare_two_plans(root_node_qep, root_node_aqp):
   global diff_idx
-  qp = preprocessing.QueryPlans()
-  root_node_aqp, _ = qp.extract_qep_data(json_aqp)
   reset_vars()
   convert_qp_to_text(root_node_aqp)
+  # print('description:', root_node_aqp.description)
+  print("AQP Steps:", steps)
 
-  root_node_qep, _ = qp.extract_qep_data(json_qep)
   reset_vars()
   convert_qp_to_text(root_node_qep)
+  print("QEP Steps:", steps)
 
   diff_idx=1
   difference = []
   reasons = []
   compare_children_nodes(root_node_aqp, root_node_qep, difference, reasons)
-  diff_str = ""
-  for i in range (len(reasons)):
 
-    diff_str = diff_str + difference[i] + "\n"
+  diff_str = ""
+  for i in range(len(reasons)):
+    diff_str += difference[i] + "\n"
     if reasons[i] != "":
       diff_str = diff_str + reasons[i] + "\n"
 
@@ -232,25 +257,28 @@ def compare_children_nodes(nodeA, nodeB, difference, reasons):
   """
   This function recursively traveses both the plan trees and compares the corresponding nodes 
   Args:
-      nodeA (Node): input node to be compared
-      nodeB (Node): target node to be compared against
+      nodeA (Node): input node to be compared (AQP)
+      nodeB (Node): target node to be compared against (QEP)
       difference (string): structural difference between two nodes
       reasons (string): explanation for difference between the nodes
   """
+  print(f"comparing children nodes AQP.{nodeA.node_type} and QEP.{nodeB.node_type}")
   global diff_idx
   childrenA = nodeA.children
   childrenB = nodeB.children
   children_no_A = len(childrenA)
   children_no_B = len(childrenB)
 
+  # If both node_types are the same and they have the same number of children (!= 0), compare each corr pair of children
   if nodeA.node_type == nodeB.node_type and children_no_A == children_no_B:
     if children_no_A != 0:
       for i in range(len(childrenA)):
-        compare_children_nodes(childrenA[i], childrenB[i],  difference, reasons)
+        compare_children_nodes(childrenA[i], childrenB[i], difference, reasons)
 
   else:
+    # If AQP node_type == "Hash" or "Sort"
     if nodeA.node_type == 'Hash' or nodeA.node_type == 'Sort':
-      text = "Difference: {} - {} has been transformed to {}".format(diff_idx, nodeA.children[0].description, nodeB.description)
+      text = f"Difference {diff_idx}: {nodeA.children[0].description} has been transformed to {nodeB.description}"
 
       text = modify_text(text)
       difference.append(text)
@@ -258,8 +286,9 @@ def compare_children_nodes(nodeA, nodeB, difference, reasons):
       reasons.append(reason)
       diff_idx += 1
 
+    # If QEP node_type == "Hash" or "Sort"
     elif nodeB.node_type == 'Hash' or nodeB.node_type == 'Sort':
-      text = "Difference: {} - {} has been transformed to {}".format(diff_idx, nodeA.description, nodeB.children[0].description)
+      text = f"Difference {diff_idx}: {nodeA.description} has been transformed to {nodeB.children[0].description}"
 
       text = modify_text(text)
       difference.append(text)
@@ -271,10 +300,10 @@ def compare_children_nodes(nodeA, nodeB, difference, reasons):
       compare_children_nodes(childrenA[0], nodeB, difference, reasons)
 
     elif 'Gather' in nodeB.node_type:
-      compare_children_nodes(nodeA, childrenB[0],  difference, reasons)
+      compare_children_nodes(nodeA, childrenB[0], difference, reasons)
+      
     else:
-      text = "Difference: {} - {} has been transformed to {}".format(diff_idx, nodeA.description, nodeB.description)
-
+      text = f"Difference {diff_idx}: {nodeA.description} has been transformed to {nodeB.description}"
       text = modify_text(text)
       difference.append(text)
       reason = generate_node_diff_reason(nodeA, nodeB, diff_idx)
@@ -286,12 +315,14 @@ def compare_children_nodes(nodeA, nodeB, difference, reasons):
         compare_children_nodes(childrenA[0], childrenB[0], difference, reasons)
       if children_no_A == 2:
         compare_children_nodes(childrenA[0], childrenB[0], difference, reasons)
-        compare_children_nodes(childrenA[1], childrenB[1],  difference, reasons)
+        compare_children_nodes(childrenA[1], childrenB[1], difference, reasons)
+
+  return
 
 
-def modify_text(str):
-  str = str.replace('perform ', '')
-  return 
+def modify_text(text):
+  text = text.replace('perform ', '')
+  return text
 
 
 def generate_node_diff_reason(node_a, node_b, diff_idx):
@@ -299,85 +330,93 @@ def generate_node_diff_reason(node_a, node_b, diff_idx):
   This function is used to generate the reasons for the difference in the nodes of the two QEPs being compared. The function 
   compare_children_nodes() calls this function when it is comparing the two children nodes.
   Args:
-      node_a (Node): input node
-      node_b (Node): target node
+      node_a (Node): input node (AQP)
+      node_b (Node): target node (QEP)
       diff_idx (int): index of the difference for which the reason is being generated
   Returns:
       string : Reason for difference between input and target nodes
   """
   text = ""
-  if node_a.node_type =="Index Scan" and node_b.node_type == "Seq Scan":
-    text = "Difference {} Reasoning: ".format(diff_idx)
-    text += "{} in Plan 1 on relation {} has now transformed to Sequential Scan in Plan 2 on relation {}. This can be attributed to ".format(node_a.node_type, node_a.relation_name, node_b.relation_name)
+  if node_a.node_type == "Index Scan" and node_b.node_type == "Seq Scan":
+    text = f"Difference {diff_idx} Reasoning: "
+    text += f"{node_a.node_type} in AQP on relation {node_a.relation_name} has now transformed to Sequential Scan in QEP on relation {node_b.relation_name}. This can be attributed to "
     # check conditions for transformation from end condition. Here seq scan doesn't use index
     if node_b.index_name is None:
-      text += "Plan 1 uses the index attribute {} for selection, which is not used by Plan 2".format(node_a.index_name)
+      text += f"AQP uses the index attribute {node_a.index_name} for selection, which is not used by QEP"
     if int(node_a.actual_rows) < int(node_b.actual_rows):
-      text += "and due to this, the actual row count returned increases from {} to {}. ".format(node_a.actual_rows, node_b.actual_rows)
+      text += f"and due to this, the actual row count returned increases from {node_a.actual_rows} to {node_b.actual_rows}. "
 
     if node_a.index_condition != node_b.table_filter and int(node_a.actual_rows) < int(node_b.actual_rows):
       text += "This behavior is generally consistent with the change in the selection predicates from {} to {}.".format(node_a.index_condition if node_a.index_condition is not None else "None", node_b.table_filter if node_b.table_filter is not None else "None")
       
-  elif node_b.node_type =="Index Scan" and node_a.node_type == "Seq Scan":
-    text = "Difference {} Reasoning: ".format(diff_idx)
-    text += "Sequential Scan in Plan 1 on relation {} has now transformed to {} in Plan 2 on relation {}. This can be attributed to ".format(node_a.relation_name, node_b.node_type, node_b.relation_name)
+  elif node_b.node_type == "Index Scan" and node_a.node_type == "Seq Scan":
+    text = f"Difference {diff_idx} Reasoning: "
+    text += f"Sequential Scan in AQP on relation {node_a.relation_name} has now transformed to {node_b.node_type} in QEP on relation {node_b.relation_name}. This can be attributed to "
     if node_a.index_name is None:  
-      text += "Plan 2 uses the index attribute {} for selection, which is not used by Plan 1.".format(node_b.index_name)
+      text += f"QEP uses the index attribute {node_b.index_name} for selection, which is not used by AQP."
     elif node_a.index_name is not None:
-      text += "Both Plan 1 and Plan 2 use their index attributes for selection, which are {} and {} respectively.".format(node_a.index_name, node_b.index_name)
+      text += f"Both AQP and QEP use their index attributes for selection, which are {node_a.index_name} and {node_b.index_name} respectively."
     if int(node_a.actual_rows) > int(node_b.actual_rows):
-      text += "Due to this, the actual row count returned decreases from {} to {}. ".format(node_a.actual_rows, node_b.actual_rows)
+      text += f"Due to this, the actual row count returned decreases from {node_a.actual_rows} to {node_b.actual_rows}. "
     if node_a.table_filter != node_b.index_condition and int(node_a.actual_rows) > int(node_b.actual_rows):
       text += "This behavior is generally consistent with the change in the selection predicates from {} to {}.".format(node_a.table_filter if node_a.table_filter is not None else "None", node_b.index_condition if node_b.index_condition is not None else "None")
 
+  elif node_a.node_type == "Index Scan" and "Bitmap" in node_b.node_type and "Scan" in node_b.node_type:
+    text = f"Difference {diff_idx} Reasoning: "
+    text += f"Index Scan in AQP on relation {node_a.relation_name} has now transformed to {node_b.node_type} in QEP on relation {node_b.relation_name}. This can be attributed to the fact that more than a handful of data must be read, so PostgreSQL decided to use {node_b.node_type} which is more efficient in reading a larger number of records than Index Scan."
+
+  elif node_b.node_type == "Index Scan" and "Bitmap" in node_a.node_type and "Scan" in node_a.node_type:
+    text = f"Difference {diff_idx} Reasoning: "
+    text += f"{node_a.node_type} in AQP on relation {node_a.relation_name} has now transformed to Index Scan in QEP on relation {node_b.relation_name}. This can be attributed to the fact that only a handful of data must be read, so PostgreSQL decided to use Index Scan which is more efficient in reading a small number of records."
+
   elif node_a.node_type and node_b.node_type in ['Merge Join', "Hash Join", "Nested Loop"]:
-    text = "Difference {} Reasoning: ".format(diff_idx)
+    text = f"Difference {diff_idx} Reasoning: "
     if node_a.node_type == "Nested Loop" and node_b.node_type == "Merge Join":
-      text += "{} in Plan 1 on relation {} has now transformed to {} in Plan 2 on relation {}. This can be attributed to ".format(node_a.node_type, node_a.relation_name, node_b.node_type, node_b.relation_name)
+      text += f"{node_a.node_type} in AQP on relation {node_a.relation_name} has now transformed to {node_b.node_type} in QEP on relation {node_b.relation_name}. This can be attributed to "
       if int(node_a.actual_rows) < int(node_b.actual_rows):
-        text += "the actual row count returned increases from {} to {}.".format(node_a.actual_rows, node_b.actual_rows)
+        text += f"the actual row count returned increases from {node_a.actual_rows} to {node_b.actual_rows}. "
       if "=" in node_b.node_type:
-        text += "The join condition is performed with an equality operator."
-      text += "Both sides of the Join operator in Plan 2 can be sorted on the join condition efficiently."
+        text += "The join condition is performed with an equality operator. "
+      text += "Both sides of the Join operator in QEP can be sorted on the join condition efficiently. "
 
     if node_a.node_type == "Nested Loop" and node_b.node_type == "Hash Join":
-      text += "{} in Plan 1 on relation {} has now transformed to {} in Plan 2 on relation {}. This can be attributed to ".format(node_a.node_type, node_a.relation_name, node_b.node_type, node_b.relation_name)
+      text += f"{node_a.node_type} in AQP on relation {node_a.relation_name} has now transformed to {node_b.node_type} in QEP on relation {node_b.relation_name}. This can be attributed to "
       if int(node_a.actual_rows) < int(node_b.actual_rows):
-        text += "the actual row count returned increases from {} to {}.".format(node_a.actual_rows, node_b.actual_rows)
+        text += f"the actual row count returned increases from {node_a.actual_rows} to {node_b.actual_rows}. "
       if "=" in node_b.node_type:
-        text += "The join condition is performed with an equality operator."
+        text += "The join condition is performed with an equality operator. "
 
     if node_a.node_type == "Merge Join" and node_b.node_type == "Nested Loop":
-      text += "{} in Plan 1 on relation {} has now transformed to {} in Plan 2 on relation {}. This can be attributed to ".format(node_a.node_type, node_a.relation_name, node_b.node_type, node_b.relation_name)
+      text += f"{node_a.node_type} in AQP on relation {node_a.relation_name} has now transformed to {node_b.node_type} in QEP on relation {node_b.relation_name}. This can be attributed to "
       if int(node_a.actual_rows) > int(node_b.actual_rows):
-        text += "the actual row count returned decreases from {} to {}.".format(node_a.actual_rows, node_b.actual_rows)
+        text += f"the actual row count returned decreases from {node_a.actual_rows} to {node_b.actual_rows}. "
       elif int(node_a.actual_rows) < int(node_b.actual_rows):
-        text += "the actual row count returned increases from {} to {}.".format(node_a.actual_rows, node_b.actual_rows)
-        text += "{} joins are used in the scenario where the join conditions are not performed with the equality operator".format(node_b.node_type)
+        text += f"the actual row count returned increases from {node_a.actual_rows} to {node_b.actual_rows}. "
+        text += f"{node_b.node_type} joins are used in the scenario where the join conditions are not performed with the equality operator. "
         
     if node_a.node_type == "Merge Join" and node_b.node_type == "Hash Join":
-      text += "{} in Plan 1 on relation {} has now transformed to {} in Plan 2 on relation {}. This can be attributed to ".format(node_a.node_type, node_a.relation_name, node_b.node_type, node_b.relation_name)
+      text += f"{node_a.node_type} in AQP on relation {node_a.relation_name} has now transformed to {node_b.node_type} in QEP on relation {node_b.relation_name}. This can be attributed to "
 
       if int(node_a.actual_rows) < int(node_b.actual_rows):
-        text += "the actual row count returned increases from {} to {}.".format(node_a.actual_rows, node_b.actual_rows)
+        text += f"the actual row count returned increases from {node_a.actual_rows} to {node_b.actual_rows}. "
       if int(node_a.actual_rows) > int(node_b.actual_rows):
-        text += "the actual row count returned decreases from {} to {}.".format(node_a.actual_rows, node_b.actual_rows)
+        text += f"the actual row count returned decreases from {node_a.actual_rows} to {node_b.actual_rows}. "
       text += "Both sides of the Join operator in Plan 2 can be sorted on the join condition efficiently. "
 
     if node_a.node_type == "Hash Join" and node_b.node_type == "Nested Loop":
-      text += "{} in Plan 1 on relation {} has now transformed to {} in Plan 2 on relation {}. This can be attributed to ".format(node_a.node_type, node_a.relation_name, node_b.node_type, node_b.relation_name)
+      text += f"{node_a.node_type} in AQP on relation {node_a.relation_name} has now transformed to {node_b.node_type} in QEP on relation {node_b.relation_name}. This can be attributed to "
       if int(node_a.actual_rows) > int(node_b.actual_rows):
-        text += "the actual row count returned decreases from {} to {}.".format(node_a.actual_rows, node_b.actual_rows)
+        text += f"the actual row count returned decreases from {node_a.actual_rows} to {node_b.actual_rows}. "
       elif int(node_a.actual_rows) < int(node_b.actual_rows):
-        text += "the actual row count returned increases from {} to {}.".format(node_a.actual_rows, node_b.actual_rows)
-        text += "{} joins are used in the scenario where the join conditions are not performed with the equality operator".format(node_b.node_type)
+        text += f"the actual row count returned increases from {node_a.actual_rows} to {node_b.actual_rows}. "
+        text += f"{node_b.node_type} joins are used in the scenario where the join conditions are not performed with the equality operator. "
 
     if node_a.node_type == "Hash Join" and node_b.node_type == "Merge Join":
-      text += "{} in Plan 1 on relation {} has now transformed to {} in Plan 2 on relation {}. This can be attributed to ".format(node_a.node_type, node_a.relation_name, node_b.node_type, node_b.relation_name)
+      text += f"{node_a.node_type} in AQP on relation {node_a.relation_name} has now transformed to {node_b.node_type} in QEP on relation {node_b.relation_name}. This can be attributed to "
       if int(node_a.actual_rows) < int(node_b.actual_rows):
-        text += "the actual row count returned increases from {} to {}.".format(node_a.actual_rows, node_b.actual_rows)
+        text += f"the actual row count returned increases from {node_a.actual_rows} to {node_b.actual_rows}. "
       if int(node_a.actual_rows) > int(node_b.actual_rows):
-        text += "the actual row count returned decreases from {} to {}.".format(node_a.actual_rows, node_b.actual_rows)
+        text += f"the actual row count returned decreases from {node_a.actual_rows} to {node_b.actual_rows}. "
       text += "Both sides of the Join operator in Plan 2 can be sorted on the join condition efficiently. "
 
   return text
@@ -409,19 +448,30 @@ qep = qp.generateQEP()
 
 
 json_qep = json.loads(json.dumps(qep[0][0]))
-_, nodetypes = qp.extract_qep_data(json_qep)
-print(nodetypes)
+n1, nodetypes = qp.extract_qp_data(json_qep)
+# print(n1.children[0].node_type)
+# print('\n')
+# print(nodetypes)
 
 aqps = qp.generateAQPs(nodetypes)
-print(aqps[0])
-print('\n')
-print(aqps[1])
-print('\n')
-print(aqps[2])\
-# TODO check for if generated aqps are the same as the qep by naively looking at the node_types present in each aqp and the qep
-# TODO OR find a way to get more specific info from the code (i think should be can find, maybe using convert_qep_to_text function)
+# print(aqps[0])
+# print('\n')
+# print(aqps[1])
+# print('\n')
+# print(aqps[2])
+# TODO if AQP and QEP are the same, then include the reason of how the specific node_type that we tried to exclude must be used so the QEP must use it
+# TODO refactor code somemore
+# TODO test out more queries
 
-# json_aqp = json.loads(json.dumps(aqps[0][0][0]))
+json_aqp = json.loads(json.dumps(aqps[0][0][0]))
 
-# print(compare_two_plans(json_qep, json_aqp))
+root_node_qep, _ = qp.extract_qp_data(json_qep)
+root_node_aqp, _ = qp.extract_qp_data(json_aqp)
+
+print("QEP")
+print(json_qep)
+print("AQP")
+print(json_aqp)
+
+print(compare_two_plans(root_node_qep, root_node_aqp))
 # print(json_qep[0]['Plan'])
