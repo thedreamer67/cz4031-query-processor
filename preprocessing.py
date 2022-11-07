@@ -3,14 +3,6 @@ Contains code for reading inputs and any preprocessing necessary to make our alg
 """
 
 import psycopg2
-import re
-import itertools
-import sqlparse
-import json
-from psycopg2 import sql
-from tqdm import tqdm
-from sqlparse.sql import IdentifierList, Identifier
-from sqlparse.tokens import Keyword, DML
 import queue
 
 
