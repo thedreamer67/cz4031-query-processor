@@ -2,6 +2,7 @@
 Contains code for generating the annotations
 """
 
+# Compares 2 diff query plans and returns the differences as a string
 def compare_two_plans(root_node_qep, root_node_aqp):
   global diff_idx
   reset_vars()
@@ -29,12 +30,11 @@ def compare_two_plans(root_node_qep, root_node_aqp):
 
 def convert_qp_to_text(node, skip=False):
   """
-  This function converts the QEP node to text based on a set of rules, which have been predetermined.
+  This function converts the QP node to text, based on a set of rules which have been pre-determined
   Args:
-      node (Node): Node of the QEP
-      skip (bool, optional): Skip processing of current node. Defaults to False.
+      node (Node): Node of the QP
+      skip (bool, optional): Skip processing of current node (default is false)
   """
-
 
   global steps, cur_step, cur_table_name
   increment = True
@@ -199,7 +199,7 @@ def extract_qep_conditions(op_name, conditions, table_subquery_name_pair):
       conditions (dynamic): Attribute to filter upon. This can be a key or a operation condition of a node
       table_subquery_name_pair ([type]): [description]
   Returns:
-      string : explanation for the condition to be met
+      string : Explanation for the condition to be met
   """
 
   if isinstance(conditions, str):
@@ -216,12 +216,12 @@ def extract_qep_conditions(op_name, conditions, table_subquery_name_pair):
 
 def compare_children_nodes(nodeAQP, nodeQEP, difference, reasons):
   """
-  This function recursively traveses both the plan trees and compares the corresponding nodes 
+  This function recursively traveses both plan trees and compares the corresponding nodes 
   Args:
-      nodeAQP (Node): input node to be compared (AQP)
-      nodeQEP (Node): target node to be compared against (QEP)
-      difference (string): structural difference between two nodes
-      reasons (string): explanation for difference between the nodes
+      nodeAQP (Node): AQP node
+      nodeQEP (Node): QEP node
+      difference (string): Structural difference between two nodes
+      reasons (string): Explanation for difference between the nodes
   """
   # print(f"comparing children nodes AQP.{nodeAQP.node_type} and QEP.{nodeQEP.node_type}")
   global diff_idx
@@ -288,12 +288,11 @@ def modify_text(text):
 
 def generate_node_diff_reason(node_aqp, node_qep, diff_idx):
   """
-  This function is used to generate the reasons for the difference in the nodes of the two QEPs being compared. The function 
-  compare_children_nodes() calls this function when it is comparing the two children nodes.
+  This function generates the reasons for the difference in the nodes of the 2 QPs being compared.
   Args:
       node_aqp (Node): AQP node
       node_qep (Node): QEP node
-      diff_idx (int): index of the difference for which the reason is being generated
+      diff_idx (int): Index of the difference for which the reason is being generated
   Returns:
       string : Reason for difference between AQP and QEP nodes
   """
