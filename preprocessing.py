@@ -215,14 +215,3 @@ class QueryPlans:
           q_parent_plans.put(current_node)
 
     return root_node, node_types
-
-
-if __name__ == "__main__":
-  query = 'select N.n_name, R.r_name from nation N, region R where N.n_regionkey=1 and N.n_regionkey=R.r_regionkey'
-  qp = QueryPlans(query)
-  output = qp.generateQEP()
-  print(output)
-  print('\n')
-
-  query_result = json.loads(json.dumps(output[0][0]))
-  print(query_result[0]['Plan'])
