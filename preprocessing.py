@@ -1,9 +1,9 @@
 """
 Contains code for reading inputs and any preprocessing necessary to make our algorithm work, and our database connection
 """
-
 import psycopg2
 import queue
+from configparser import ConfigParser
 
 
 class Database:
@@ -198,3 +198,208 @@ class QueryPlans:
           q_parent_plans.put(current_node)
 
     return root_node, node_types
+
+def config(filename='database.ini', section='postgresql'):
+  # create a parser
+  parser = ConfigParser()
+  # read config file
+  parser.read(filename)
+
+  # get section, default to postgresql
+  db = {}
+  if parser.has_section(section):
+    params = parser.items(section)
+    for param in params:
+      db[param[0]] = param[1]
+  else:
+    raise Exception('Section {0} not found in the {1} file'.format(section, filename))
+
+  return db
+
+
+def connect():
+  """ Connect to the PostgreSQL database server and print version number"""
+  conn = None
+  try:
+    # read connection parameters
+    params = config()
+
+    # connect to the PostgreSQL server
+    print('Connecting to the PostgreSQL database...')
+    conn = psycopg2.connect(**params)
+
+    # create a cursor
+    cur = conn.cursor()
+
+    # execute a statement
+    print('PostgreSQL database version:')
+    cur.execute('SELECT version()')
+
+    # display the PostgreSQL database server version
+    db_version = cur.fetchone()
+    print(db_version)
+
+    # close the communication with the PostgreSQL
+    cur.close()
+  except (Exception, psycopg2.DatabaseError) as error:
+    print(error)
+  finally:
+    if conn is not None:
+      conn.close()
+      print('Database connection closed.')
+
+
+def runQuery(query: str) -> list:
+  """ Runs the query on the PostgreSQL database server and returns the result as a matrix
+
+  Returns
+  ------
+  ['Connection Error'] if there is a connection error with the database.
+  Query results in the form of a matrix otherwise """
+  conn = None
+  try:
+    # read connection parameters
+    params = config()
+
+    # connect to the PostgreSQL server
+    print('Connecting to the PostgreSQL database...')
+    conn = psycopg2.connect(**params)
+
+    # create a cursor
+    cur = conn.cursor()
+
+    # execute a statement
+    print('PostgreSQL database version:')
+    cur.execute(query)
+
+    # display the result
+    result = []
+    while True:
+      nextLine = cur.fetchone()
+      if (nextLine is None):
+        break
+      result.append(list(nextLine))
+
+      # close the communication with the PostgreSQL
+    cur.close()
+  except (Exception, psycopg2.DatabaseError) as error:
+    print(error)
+  finally:
+    if conn is not None:
+      conn.close()
+      print('Database connection closed.')
+  try:
+    return result
+  except:
+    # raise Exception('Couldn\'t connect to database')
+    return ['Connection Error']
+
+
+def explainQuery(query: str, format='text'):
+  """ Explains the query on the PostgreSQL database server and returns the result as a matrix
+
+  Returns
+  ------
+  'Connection Error' if there is a connection error with the database.
+   Query results in the form of a matrix otherwise
+
+  Input
+  -----
+  query - The query to be explained as a string. Please dont include the EXPLAIN keyword in the query.
+   format - Either 'text' or 'json'. Default is text. """
+  # Adding Explain Keyword
+  if (format == 'json'):
+    query = "EXPLAIN (format json) " + query
+  else:
+    query = "EXPLAIN " + query
+    format = 'text'
+
+  # Connecting to DB and running
+  conn = None
+  try:
+    # read connection parameters
+    params = config()
+
+    # connect to the PostgreSQL server
+    print('Connecting to the PostgreSQL database...')
+    conn = psycopg2.connect(**params)
+
+    # create a cursor
+    cur = conn.cursor()
+
+    # execute a statement
+    print('PostgreSQL database version:')
+    cur.execute(query)
+
+    # display the result
+    if (format == 'text'):
+      result = ''
+      while True:
+        nextLine = cur.fetchone()
+        if (nextLine is None):
+          break
+        result += nextLine[0] + '\n'
+    # display the result
+    elif (format == 'json'):
+      result = cur.fetchone()[0]
+
+      # close the communication with the PostgreSQL
+    cur.close()
+  except (Exception, psycopg2.DatabaseError) as error:
+    print(error)
+  finally:
+    if conn is not None:
+      conn.close()
+      print('Database connection closed.')
+  try:
+    return result
+  except:
+    # raise Exception('Couldn\'t connect to database')
+    return ['Connection Error']
+
+
+def stringProcess(list_nodes, left_node):
+  # Adjusting list_nodes such that each element is a single node in a graph
+  i = 1
+  while (i < len(list_nodes)):
+    # If an element doesn't have -> in it then it is not a node by itself but a part of the previous node
+    if ('->' not in list_nodes[i]):
+      # Merge with previous string
+      list_nodes[i - 1] = list_nodes[i - 1] + '\n' + list_nodes[i].lstrip()
+      list_nodes.pop(i)
+    else:
+      i += 1
+
+  i = 1
+  while (i < len(list_nodes) - 1):
+    # If the current and next node are at the same level of indentation then its on the right (False) otherwise its on the left (True)
+    indent_level_current = len(list_nodes[i]) - len(list_nodes[i].lstrip())
+    indent_level_next = len(list_nodes[i + 1]) - len(list_nodes[i + 1].lstrip())
+    if (indent_level_current == indent_level_next):
+      left_node.append(False)
+    else:
+      left_node.append(True)
+    # Cleaning of text (Removing extra spaces and -> from the strings)
+    list_nodes[i] = list_nodes[i].lstrip()[2:].strip()
+    i += 1
+  # For the last node (Always going to be on the left)
+  left_node.append(True)
+  list_nodes[i] = list_nodes[i].lstrip()[2:].strip()
+
+  # Making sure that there is always a new line char in every string (For arrow length consistancy)
+  i = 0
+  while (i < len(list_nodes)):
+    if ('\n' not in list_nodes[i]):
+      try:
+        index1 = list_nodes[i].index('(')
+        list_nodes[i] = list_nodes[i][:index1] + '\n' + list_nodes[i][index1:]
+      except:
+        pass
+    i += 1
+
+  # Just for debugging remove later
+  print(list_nodes)
+  print(left_node)
+
+  return list_nodes, left_node
+
