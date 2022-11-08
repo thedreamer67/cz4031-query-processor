@@ -357,49 +357,70 @@ def explainQuery(query: str, format='text'):
     # raise Exception('Couldn\'t connect to database')
     return ['Connection Error']
 
+def stringProcess(list_nodes, col_level = []):
+    # Adjusting list_nodes such that each element is a single node in a graph
+    i = 1
+    while(i < len(list_nodes)):
+        # If an element doesn't have -> in it then it is not a node by itself but a part of the previous node
+        if('->' not in list_nodes[i]):
+            # Merge with previous string
+            list_nodes[i-1] = list_nodes[i-1] + '\n' +  list_nodes[i].lstrip()
+            list_nodes.pop(i)
+        else:
+            i += 1
 
-def stringProcess(list_nodes, left_node):
-  # Adjusting list_nodes such that each element is a single node in a graph
-  i = 1
-  while (i < len(list_nodes)):
-    # If an element doesn't have -> in it then it is not a node by itself but a part of the previous node
-    if ('->' not in list_nodes[i]):
-      # Merge with previous string
-      list_nodes[i - 1] = list_nodes[i - 1] + '\n' + list_nodes[i].lstrip()
-      list_nodes.pop(i)
-    else:
-      i += 1
+    # Finding the indent level of each node
+    indent_level = []
+    i = 0
+    while(i < len(list_nodes)):
+        indent_level.append(len(list_nodes[i]) - len(list_nodes[i].lstrip()))
+        i += 1
 
-  i = 1
-  while (i < len(list_nodes) - 1):
-    # If the current and next node are at the same level of indentation then its on the right (False) otherwise its on the left (True)
-    indent_level_current = len(list_nodes[i]) - len(list_nodes[i].lstrip())
-    indent_level_next = len(list_nodes[i + 1]) - len(list_nodes[i + 1].lstrip())
-    if (indent_level_current == indent_level_next):
-      left_node.append(False)
-    else:
-      left_node.append(True)
-    # Cleaning of text (Removing extra spaces and -> from the strings)
-    list_nodes[i] = list_nodes[i].lstrip()[2:].strip()
-    i += 1
-  # For the last node (Always going to be on the left)
-  left_node.append(True)
-  list_nodes[i] = list_nodes[i].lstrip()[2:].strip()
+    # print(indent_level)
 
-  # Making sure that there is always a new line char in every string (For arrow length consistancy)
-  i = 0
-  while (i < len(list_nodes)):
-    if ('\n' not in list_nodes[i]):
-      try:
-        index1 = list_nodes[i].index('(')
-        list_nodes[i] = list_nodes[i][:index1] + '\n' + list_nodes[i][index1:]
-      except:
-        pass
-    i += 1
+    # Finding the column level of each node
+    col_level = []
+    curr_col_level = 0
+    i = 0
+    while(i < len(list_nodes)):
+        # Checking if there is a node ahead at the same indent level
+        j = i+1
+        while(j < len(list_nodes) and indent_level[j] > indent_level[i]):
+            j += 1
+        if(j != len(list_nodes)) and (indent_level[j] == indent_level[i] and j != i):
+            # There exits another node at same indent level
+            curr_col_level += 1
+            col_level.append(curr_col_level)
+        else:
+            # There isnt a node ahead so we check behind
+            j = i-1
+            while(j >= 0):
+                if(indent_level[j] == indent_level[i]):
+                    break
+                j -= 1
+            # If there is a node behind
+            if(indent_level[i] == indent_level[j] and j >= 0):
+                curr_col_level = col_level[j] - 1
+                col_level.append(curr_col_level)
+            else:
+                col_level.append(curr_col_level)
+        # Cleaning of text (Removing extra spaces and -> from the strings)
+        if(i != 0):
+            list_nodes[i] = list_nodes[i].lstrip()[2:].strip()
+        i += 1 
 
-  # Just for debugging remove later
-  print(list_nodes)
-  print(left_node)
+    # print(col_level)
 
-  return list_nodes, left_node
+    # Making sure that there is always a new line char in every string (For arrow length consistancy)
+    i = 0
+    while(i < len(list_nodes)):
+        if('\n' not in list_nodes[i]):
+            try:
+                index1 = list_nodes[i].index('(')
+                list_nodes[i] = list_nodes[i][:index1] + '\n' + list_nodes[i][index1:]
+            except:
+                pass
+        i += 1
+    
+    return list_nodes, col_level
 
