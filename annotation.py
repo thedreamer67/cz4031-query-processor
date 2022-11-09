@@ -512,3 +512,89 @@ def reset_vars():
   cur_step = 1
   cur_table_name = 1
   table_subquery_name_pair = {}
+  
+  
+def _get_icon(node_str: str) -> str:
+    """Returns the file address of the icon to be used"""
+    if 'Gather' in node_str:
+        return "icons\gather.png"
+    if 'Index' in node_str:
+        return "icons\index.png"
+    if 'Bitmap' in node_str:
+        return "icons\\bitmap.png"
+    if 'Join' in node_str:
+        return "icons\join.png"
+    if 'Hash' in node_str:
+        return "icons\hash.png"
+    if 'Scan' in node_str:
+        return "icons\scan.png"
+    if 'Seq' in node_str:
+        return "icons\sequence.png"
+    if 'Loop' in node_str:
+        return "icons\loop.png"
+    else:
+        return "icons\database.png"
+
+def _get_color(node_str:str) -> str:
+    """Returns the color of the node based on its content"""
+    if 'Scan' in node_str:
+        return '#F391A0'
+    elif 'Join' in node_str:
+        return '#F5B700'
+    else:
+        return '#8EEDF7'
+
+def show_graph(list_nodes, col_level):
+    graphWidth = max(col_level) + 8
+    graphHeight = len(list_nodes)
+    fig, ax = plt.subplots(figsize=(graphWidth, graphHeight), dpi=70)
+    # plt.figure(figsize=(graphWidth, graphHeight), dpi=70)
+    y_arrow_offset = 0.65
+    x_arrow_offset = (0.6, 0.95)  #(left-to-left, right-to-left)
+    y_icon_offset = 0.2
+    x_node_offset = 0.5
+    # Making something to have an empty plot of
+    X = [0, graphWidth]
+    Y = [-1*graphHeight, 0]
+    plt.scatter(X, Y, alpha = 0)
+
+    # For first node
+    plt.text(0 + x_node_offset, 0, list_nodes[0], fontsize=10,verticalalignment='top', bbox=dict(boxstyle='round', facecolor = _get_color(list_nodes[0]), alpha=1))
+    # Put an image
+    try:
+        logo = image.imread(_get_icon(list_nodes[0]))
+        imagebox = OffsetImage(logo, zoom = 0.12)
+        ab = AnnotationBbox(imagebox, (0, 0 - y_icon_offset), frameon = False)
+        ax.add_artist(ab)
+    except:
+        pass
+
+    i = 1
+    while(i < len(list_nodes)):
+        # Draw a node
+        plt.text(col_level[i] + x_node_offset, -1*i, list_nodes[i], fontsize=10, verticalalignment='top', bbox=dict(boxstyle='round', facecolor = _get_color(list_nodes[i]), alpha=1))
+        # Put an image
+        try:    # (Just in case people dont have the images of the icons stored)
+            logo = image.imread(_get_icon(list_nodes[i]))
+            imagebox = OffsetImage(logo, zoom = 0.12)
+            ab = AnnotationBbox(imagebox, (col_level[i], -1*i - y_icon_offset), frameon = False)
+            ax.add_artist(ab)
+        except:
+            pass
+        # Draw arrows
+        if(col_level[i-1] == col_level[i] - 1):
+            plt.arrow(col_level[i] + x_arrow_offset[1], -1*i, -1 , 1 - y_arrow_offset, head_width=0.1, head_length=0.1, color='black', capstyle ='butt')
+        else:
+            arrow_length = i - col_level.index(col_level[i])
+            j = i-1
+            while(j >= 0):
+                if(col_level[j] == col_level[i]):
+                    break
+                j -= 1
+            arrow_length = i - j
+            plt.arrow(col_level[i] + x_arrow_offset[0], -1*i , 0 , arrow_length - y_arrow_offset, head_width=0.1, head_length=0.1, color='black', capstyle ='butt')
+        i += 1
+
+    plt.axis('off')
+    '''plot0 = plot0.figure
+    return plot0  # '''
