@@ -4,6 +4,9 @@ Contains code for generating the annotations
 import matplotlib.pyplot as plt
 
 # Compares 2 diff query plans and returns the differences as a string
+from matplotlib import image
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+
 def compare_two_plans(root_node_qep, root_node_aqp):
   global diff_idx
   reset_vars()
@@ -557,7 +560,7 @@ def show_graph(list_nodes, col_level):
     # Making something to have an empty plot of
     X = [0, graphWidth]
     Y = [-1*graphHeight, 0]
-    plt.scatter(X, Y, alpha = 0)
+    plot0 = plt.scatter(X, Y, alpha = 0)
 
     # For first node
     plt.text(0 + x_node_offset, 0, list_nodes[0], fontsize=10,verticalalignment='top', bbox=dict(boxstyle='round', facecolor = _get_color(list_nodes[0]), alpha=1))
@@ -597,5 +600,5 @@ def show_graph(list_nodes, col_level):
         i += 1
 
     plt.axis('off')
-    '''plot0 = plot0.figure
-    return plot0  # '''
+    plot0 = plot0.figure
+    return plot0  #
