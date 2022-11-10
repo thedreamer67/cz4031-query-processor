@@ -1,6 +1,7 @@
 """
 Contains code for generating the annotations
 """
+import matplotlib.pyplot as plt
 
 # Compares 2 diff query plans and returns the differences as a string
 def compare_two_plans(root_node_qep, root_node_aqp):
