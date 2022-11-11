@@ -79,34 +79,34 @@ def convert_qp_to_text(node, skip=False):
           child.write_qep_output_name(child.children[0].read_qep_output_name()) #extract the name of the table pass into hash operator
           hashed_table = child.read_qep_output_name() #extract the name of the table being hashed
         if i < len(node.children) - 1: #not last child
-          step += ("table {} ".format(child.read_qep_output_name())) #extracting name of table
+          step += (f"table {child.read_qep_output_name()} ") #extracting name of table
         else: #last child
-          step+= (" and table {}".format(child.read_qep_output_name()))
+          step+= (f" and table {child.read_qep_output_name()}")
       step = "hash table {} {} under condition {}".format(hashed_table, step, extract_qep_conditions("Hash Cond", node.hash_condition, table_subquery_name_pair))
         #i.e. hash the table (hashed table) and perform join on (listing all child tables) under condition of (hash condition)
 
     elif "Merge" in node.node_type: #if current node is merge join
-      step += "perform {} on ".format(node.node_type.lower())
+      step += f"perform {node.node_type.lower()} on "
       any_sort = False  # Flag to indicate if sorting has been performed on child
       for i, child in enumerate(node.children):
         if child.node_type == "Sort": #child operator was a sort operation. hence table has been sorted
           child.write_qep_output_name(child.children[0].read_qep_output_name()) #update child's output name with the name of the table pass into sort operator
           any_sort = True #indicate that sorting has been done
         if i < len(node.children) - 1: #not last table
-          step += ("table {} ".format(child.read_qep_output_name()))
+          step += (f"table {child.read_qep_output_name()} ")
         else: #last table
-          step += (" and table {} ".format(child.read_qep_output_name()))
+          step += (f" and table {child.read_qep_output_name()} ")
       # combining sort with merge if table has been sorted
       if any_sort: #some tables have been sorted
         sort_step = "sort "
         for child in node.children:
           if child.node_type == "Sort": #find which tables have been sorted and insert into sort step
             if i < len(node.children) - 1: ##not last table
-              sort_step += ("table {} ".format(child.read_qep_output_name()))
+              sort_step += (f"table {child.read_qep_output_name()} ")
             else:
-              sort_step += (" and table {} ".format(child.read_qep_output_name()))
+              sort_step += (f" and table {child.read_qep_output_name()} ")
 
-        step = "{} and {}".format(sort_step, step) #if any_sort == false, then no step will just remain as is without the sort_step part added
+        step = f"{sort_step} and {step}" #if any_sort == false, then no step will just remain as is without the sort_step part added
 
   elif node.node_type == "Bitmap Heap Scan":
     # combine bitmap heap scan and bitmap index scan
@@ -115,13 +115,13 @@ def convert_qp_to_text(node, skip=False):
       step = " with index condition {} ".format(extract_qep_conditions("Recheck Cond", node.recheck_condition,table_subquery_name_pair))
       ## extract index condition
 
-    step = "perform bitmap heap scan on table {} {} ".format(node.children[0].read_qep_output_name(), step) #join the bitmap heapscan with table name and index condition
+    step = f"perform bitmap heap scan on table {node.children[0].read_qep_output_name()} {step} " #join the bitmap heapscan with table name and index condition
 
   elif "Scan" in node.node_type: #node_type is a string
     if node.node_type == "Seq Scan":
       step += "perform sequential scan on table " #extend the short form for better readability
     else:
-      step += "perform {} on table ".format(node.node_type.lower())
+      step += f"perform {node.node_type.lower()} on table "
 
     step += node.read_qep_output_name() #extract table name, the scan was perform on
 
@@ -133,48 +133,48 @@ def convert_qp_to_text(node, skip=False):
     if "Sort" in node.children[0].node_type: #unique operator has child sort operator
       node.children[0].write_qep_output_name(
         node.children[0].children[0].read_qep_output_name()) #extract the table name before sort
-      step = "sort {} ".format(node.children[0].read_qep_output_name()) #extract the table name to be sorted
+      step = f"sort {node.children[0].read_qep_output_name()} " #extract the table name to be sorted
       if node.children[0].sort_key: #key value the table is sorted on
         step += "with attribute {} and ".format(extract_qep_conditions("Sort Key", node.children[0].sort_key, table_subquery_name_pair))
       else: #no sort key
         step += " and "
-    step += "select unique tuples from table {} ".format(node.children[0].read_qep_output_name())
+    step += f"select unique tuples from table {node.children[0].read_qep_output_name()} "
 
   elif node.node_type == "Aggregate": #max, sum, avg etc.
     for child in node.children:
       # combine aggregate and sort
       if "Sort" in child.node_type:
         child.write_qep_output_name(child.children[0].read_qep_output_name()) #extract name of table for sorting
-        step = "sort {} and ".format(child.read_qep_output_name())
+        step = f"sort {node.children[0].read_qep_output_name()} and "
       # combine aggregate and scan
       if "Scan" in child.node_type:
         if child.node_type == "Seq Scan":
-          step = "perform sequential scan on {} and ".format(child.read_qep_output_name())
+          step = f"perform sequential scan on {child.read_qep_output_name()} and "
         else:
-          step = "perform {} on {} and ".format(child.node_type.lower(), child.read_qep_output_name())
+          step = f"perform {child.node_type.lower()} on {child.read_qep_output_name()} and "
     
-    step += "perform aggregate on table {}".format(node.children[0].read_qep_output_name())
+    step += f"perform aggregate on table {node.children[0].read_qep_output_name()}"
     ## IMPROVEMENT: is there a way to find which aggregate function is used, and which column is used
 
-    if len(node.children) == 2: #max of 2 children for aggregate function, BUT WHY?
-      step += " and table {} ".format(node.children[1].read_qep_output_name())
+    if len(node.children) == 2: #max of 2 children for aggregate function
+      step += f" and table {node.children[1].read_qep_output_name()} "
 
   elif node.node_type == "Sort":
     step+= "perform sort on table {} with {}".format(node.children[0].read_qep_output_name(), extract_qep_conditions("Sort Key", node.sort_key, table_subquery_name_pair))
 
   elif node.node_type == "Limit": #how many rows to extract
-    step += "limit the result from table {} to {} record(s)".format(node.children[0].read_qep_output_name(), node.plan_rows)
+    step += f"limit the result from table {node.children[0].read_qep_output_name()} to {node.plan_rows} record(s)"
   
   else:
-    step += "perform {} on ".format(node.node_type.lower())
+    step += f"perform {node.node_type.lower()} on "
     if len(node.children) > 1: #more than one child
       for i, child in enumerate(node.children):
         if i < len(node.children) - 1:
-          step += (" table {},".format(child.read_qep_output_name()))
+          step += (f" table {child.read_qep_output_name()},")
         else:
-          step += (" and table {} ".format(child.read_qep_output_name()))
+          step += (f" and table {child.read_qep_output_name()} ")
     else: #only one child
-      step+= " table {}".format(node.children[0].read_qep_output_name())
+      step+= f" table {node.children[0].read_qep_output_name()}"
   
   if node.group_key: #if there is a "group_by"
     step += " with grouping on attribute {}".format(extract_qep_conditions("Group Key", node.group_key, table_subquery_name_pair))
@@ -191,7 +191,7 @@ def convert_qp_to_text(node, skip=False):
     table_subquery_name_pair[node.subplan_name] = node.read_qep_output_name()
 
   node.update_desc(step) #shows what is being done at this node
-  step = "\nStep {}, {}.".format(cur_step, step) #join step description with Step count
+  step = f"\nStep {cur_step}, {step}." #join step description with Step count
   node.set_step(cur_step) #what step count is the cur step at
   cur_step += 1
 
@@ -294,74 +294,74 @@ def modify_text(text):
 
 
 def generate_node_diff_reason(node_aqp, node_qep, diff_idx):
-    """
-    This function generates the reasons for the difference in the nodes of the 2 QPs being compared.
-    Args:
-        node_aqp (Node): AQP node
-        node_qep (Node): QEP node
-        diff_idx (int): Index of the difference for which the reason is being generated
-    Returns:
-        string : Reason for difference between AQP and QEP nodes
-    """
-    text = ""
+  """
+  This function generates the reasons for the difference in the nodes of the 2 QPs being compared.
+  Args:
+    node_aqp (Node): AQP node
+    node_qep (Node): QEP node
+    diff_idx (int): Index of the difference for which the reason is being generated
+  Returns:
+    string : Reason for difference between AQP and QEP nodes
+  """
+  text = ""
 
   # If AQP node == Index Scan and QEP node == Seq Scan
-    # if node_aqp.node_type == "Index Scan" and node_qep.node_type == "Seq Scan":
-    #     text = f"Difference {diff_idx} Reasoning: "
-    #     text += f"{node_aqp.node_type} in AQP on relation {node_aqp.relation_name} has now transformed to Sequential Scan in QEP on relation {node_qep.relation_name}. "
-    #     # check conditions for transformation from end condition. Here seq scan doesn't use index
-    #     if node_qep.index_name is None:
-    #         text += f"AQP uses the index attribute {node_aqp.index_name} for selection, which is not used by QEP" #index scan can only be done when an index is present
-    #     if int(node_aqp.actual_rows) < int(node_qep.actual_rows):
-    #         text += f"and because of this, the actual row count returned increases from {node_aqp.actual_rows} to {node_qep.actual_rows}. "
+  # if node_aqp.node_type == "Index Scan" and node_qep.node_type == "Seq Scan":
+  #     text = f"Difference {diff_idx} Reasoning: "
+  #     text += f"{node_aqp.node_type} in AQP on relation {node_aqp.relation_name} has now transformed to Sequential Scan in QEP on relation {node_qep.relation_name}. "
+  #     # check conditions for transformation from end condition. Here seq scan doesn't use index
+  #     if node_qep.index_name is None:
+  #         text += f"AQP uses the index attribute {node_aqp.index_name} for selection, which is not used by QEP" #index scan can only be done when an index is present
+  #     if int(node_aqp.actual_rows) < int(node_qep.actual_rows):
+  #         text += f"and because of this, the actual row count returned increases from {node_aqp.actual_rows} to {node_qep.actual_rows}. "
 
-    #     if node_aqp.index_condition != node_qep.table_filter and int(node_aqp.actual_rows) < int(node_qep.actual_rows):
-    #         text += "This behavior is generally consistent with the change in the selection predicates from {} to {}.".format(node_aqp.index_condition if node_aqp.index_condition is not None else "None", node_qep.table_filter if node_qep.table_filter is not None else "None")
-    #         #CHANGES: need change the last text, maybe talk about having smaller return table is better.
+  #     if node_aqp.index_condition != node_qep.table_filter and int(node_aqp.actual_rows) < int(node_qep.actual_rows):
+  #         text += "This behavior is generally consistent with the change in the selection predicates from {} to {}.".format(node_aqp.index_condition if node_aqp.index_condition is not None else "None", node_qep.table_filter if node_qep.table_filter is not None else "None")
+  #         #CHANGES: need change the last text, maybe talk about having smaller return table is better.
 
 
-    #NEW CODE#
-    #Index Scan vs Seq Scan vs Bitmap Scan
-    #6 Combinations Total
-    #Case 1: Index Scan over Seq Scan
-    if node_qep.node_type == "Index Scan" and node_aqp.node_type == "Seq Scan":
-        text = f"Difference {diff_idx} Reasoning: "
-        text += f"Sequential Scan in AQP on relation {node_aqp.relation_name} has now transformed to {node_qep.node_type} in QEP on relation {node_qep.relation_name}. "
-        text += "Sequential Scan to scans over the entire table, which is the most inefficient out of the three algorithms. "
-        if node_qep.index_condition == node_qep.index_name:
-            text += "Since an index on the filter attribute is present for the scan, index scan will cost less and hence was chosen over sequential scan."
+  #NEW CODE#
+  #Index Scan vs Seq Scan vs Bitmap Scan
+  #6 Combinations Total
+  #Case 1: Index Scan over Seq Scan
+  if node_qep.node_type == "Index Scan" and node_aqp.node_type == "Seq Scan":
+    text = f"Difference {diff_idx} Reasoning: "
+    text += f"Sequential Scan in AQP on relation {node_aqp.relation_name} has now transformed to {node_qep.node_type} in QEP on relation {node_qep.relation_name}. "
+    text += "Sequential Scan to scans over the entire table, which is the most inefficient out of the three algorithms. "
+    if node_qep.index_condition == node_qep.index_name:
+      text += "Since an index on the filter attribute is present for the scan, index scan will cost less and hence was chosen over sequential scan."
 
-    #Case 2: Seq Scan over Index Scan
-    elif node_aqp.node_type == "Index Scan" and node_qep.node_type == "Seq Scan":
-        text = f"Difference {diff_idx} Reasoning: "
-        text += f"{node_aqp.node_type} in AQP on relation {node_aqp.relation_name} has now transformed to Sequential Scan in QEP on relation {node_qep.relation_name}. "
-        text += "Given the higher per row cost of index scan and the low selectivity of the scan predicate, sequential scan becomes more cost effective when compared to index scan. \
-            Hence, sequential scan is chosen over index scan."
+  #Case 2: Seq Scan over Index Scan
+  elif node_aqp.node_type == "Index Scan" and node_qep.node_type == "Seq Scan":
+    text = f"Difference {diff_idx} Reasoning: "
+    text += f"{node_aqp.node_type} in AQP on relation {node_aqp.relation_name} has now transformed to Sequential Scan in QEP on relation {node_qep.relation_name}. "
+    text += "Given the higher per row cost of index scan and the low selectivity of the scan predicate, sequential scan becomes more cost effective when compared to index scan. \
+      Hence, sequential scan is chosen over index scan."
 
-    #Case 3: Index Scan over Bitmap Scan
-    elif node_qep.node_type == "Index Scan" and "Bitmap" in node_aqp.node_type and "Scan" in node_aqp.node_type:
-        text = f"Difference {diff_idx} Reasoning: "
-        text += f"{node_aqp.node_type} in AQP on relation {node_aqp.relation_name} has now transformed to Index Scan in QEP on relation {node_qep.relation_name}. "
-        text += f"Since the scan predicate, {node_qep.index_condition}, has a high selectivity. It is more efficient to perform index scan as compared to bitmap scan."
+  #Case 3: Index Scan over Bitmap Scan
+  elif node_qep.node_type == "Index Scan" and "Bitmap" in node_aqp.node_type and "Scan" in node_aqp.node_type:
+    text = f"Difference {diff_idx} Reasoning: "
+    text += f"{node_aqp.node_type} in AQP on relation {node_aqp.relation_name} has now transformed to Index Scan in QEP on relation {node_qep.relation_name}. "
+    text += f"Since the scan predicate, {node_qep.index_condition}, has a high selectivity. It is more efficient to perform index scan as compared to bitmap scan."
 
-    #Case 4: Bitmap Scan over Index Scan
-    elif node_aqp.node_type == "Index Scan" and "Bitmap" in node_qep.node_type and "Scan" in node_qep.node_type:
-        text = f"Difference {diff_idx} Reasoning: "
-        text += f"{node_aqp.node_type} in AQP on relation {node_aqp.relation_name} has now transformed to {node_qep.node_type} in QEP on relation {node_qep.relation_name}. "
-        text += f"Since the scan predicate, {node_qep.index_condition}, has a low selectivity. In order to take advantage of the ease of bulk data reading, bitmap scan is chosen over index scan."
-    
-    #Case 5: Seq Scan over Bitmap Scan
-    elif node_qep.node_type == "Seq Scan" and "Bitmap" in node_aqp.node_type and "Scan" in node_aqp.node_type:
-        text = f"Difference {diff_idx} Reasoning: "
-        text += f"{node_aqp.node_type} in AQP on relation {node_aqp.relation_name} has now transformed to Sequential Scan in QEP on relation {node_qep.relation_name}."
-        text += "Sequential scan is chosen over bitmap scan when the bitmap does not fit in the working memory. "
-        text += "Hence, using bitmap scan will incur additional I/O for the bitmap, making sequential scan more cost efficient."
+  #Case 4: Bitmap Scan over Index Scan
+  elif node_aqp.node_type == "Index Scan" and "Bitmap" in node_qep.node_type and "Scan" in node_qep.node_type:
+    text = f"Difference {diff_idx} Reasoning: "
+    text += f"{node_aqp.node_type} in AQP on relation {node_aqp.relation_name} has now transformed to {node_qep.node_type} in QEP on relation {node_qep.relation_name}. "
+    text += f"Since the scan predicate, {node_qep.index_condition}, has a low selectivity. In order to take advantage of the ease of bulk data reading, bitmap scan is chosen over index scan."
+  
+  #Case 5: Seq Scan over Bitmap Scan
+  elif node_qep.node_type == "Seq Scan" and "Bitmap" in node_aqp.node_type and "Scan" in node_aqp.node_type:
+    text = f"Difference {diff_idx} Reasoning: "
+    text += f"{node_aqp.node_type} in AQP on relation {node_aqp.relation_name} has now transformed to Sequential Scan in QEP on relation {node_qep.relation_name}."
+    text += "Sequential scan is chosen over bitmap scan when the bitmap does not fit in the working memory. "
+    text += "Hence, using bitmap scan will incur additional I/O for the bitmap, making sequential scan more cost efficient."
 
-    #Case 6: Bitmap Scan over Seq Scan
-    elif node_aqp.node_type == "Seq Scan" and "Bitmap" in node_qep.node_type and "Scan" in node_qep.node_type:
-        text = f"Difference {diff_idx} Reasoning: "
-        text += f"Seq Scan in AQP on relation {node_aqp.relation_name} has now transformed to {node_qep.node_type} in QEP on relation {node_qep.relation_name}."
-        text += f"Bitmap scan takes advantage of the index on relation {node_qep.relation_name} to reduce the scan space, hence it is more cost efficient compared to sequential scan."
+  #Case 6: Bitmap Scan over Seq Scan
+  elif node_aqp.node_type == "Seq Scan" and "Bitmap" in node_qep.node_type and "Scan" in node_qep.node_type:
+    text = f"Difference {diff_idx} Reasoning: "
+    text += f"Seq Scan in AQP on relation {node_aqp.relation_name} has now transformed to {node_qep.node_type} in QEP on relation {node_qep.relation_name}."
+    text += f"Bitmap scan takes advantage of the index on relation {node_qep.relation_name} to reduce the scan space, hence it is more cost efficient compared to sequential scan."
 
 #   # If AQP node == Seq Scan and QEP node == Index Scan
 #   elif node_qep.node_type == "Index Scan" and node_aqp.node_type == "Seq Scan":
@@ -399,52 +399,52 @@ def generate_node_diff_reason(node_aqp, node_qep, diff_idx):
 
   ##NEW CODE##
   # If nodes are join nodes
-   # "Merge Join" vs "Hash Join" vs "Nested Loop"
-    elif node_aqp.node_type and node_qep.node_type in ['Merge Join', "Hash Join", "Nested Loop"]:
-      text = f"Difference {diff_idx} Reasoning: "
-      #case #1: Merge Join over nested loop
-      if node_aqp.node_type == "Nested Loop" and node_qep.node_type == "Merge Join":
-        text += f"{node_aqp.node_type} in AQP on relation {node_aqp.relation_name} has now transformed to {node_qep.node_type} in QEP on relation {node_qep.relation_name}. "
-        if "=" in node_qep.node_type:
-          text += "The join condition is performed with an equality operator. "
-        text += "Nested Loop is generally considered the most inefficient out of the three algorithms. "
-        text += "Since the relations to be joined are already sorted, merge join is more efficient and hence is chosen over nested loop. "
-   
+  # "Merge Join" vs "Hash Join" vs "Nested Loop"
+  elif node_aqp.node_type and node_qep.node_type in ['Merge Join', "Hash Join", "Nested Loop"]:
+    text = f"Difference {diff_idx} Reasoning: "
+    #case #1: Merge Join over nested loop
+    if node_aqp.node_type == "Nested Loop" and node_qep.node_type == "Merge Join":
+      text += f"{node_aqp.node_type} in AQP on relation {node_aqp.relation_name} has now transformed to {node_qep.node_type} in QEP on relation {node_qep.relation_name}. "
+      if "=" in node_qep.node_type:
+        text += "The join condition is performed with an equality operator. "
+      text += "Nested Loop is generally considered the most inefficient out of the three algorithms. "
+      text += "Since the relations to be joined are already sorted, merge join is more efficient and hence is chosen over nested loop. "
+  
 
-      #case #2: nested loop over merge join
-      if node_aqp.node_type == "Merge Join" and node_qep.node_type == "Nested Loop":
-        text += f"{node_aqp.node_type} in AQP on relation {node_aqp.relation_name} has now transformed to {node_qep.node_type} in QEP on relation {node_qep.relation_name}. "
-        if "=" in node_qep.node_type:
-          text += "The join condition is performed with an equality operator. "
-        else:
-          text += "The join condition is not an equality operator, hence Nested Loop Join is more suitable. "
-        text += "Given that the outer loop relation is relatively small and all tuples with the same join attribute values cannot fit in memory, doing nested loop join will be more cost efficient than merge join. "
+    #case #2: nested loop over merge join
+    if node_aqp.node_type == "Merge Join" and node_qep.node_type == "Nested Loop":
+      text += f"{node_aqp.node_type} in AQP on relation {node_aqp.relation_name} has now transformed to {node_qep.node_type} in QEP on relation {node_qep.relation_name}. "
+      if "=" in node_qep.node_type:
+        text += "The join condition is performed with an equality operator. "
+      else:
+        text += "The join condition is not an equality operator, hence Nested Loop Join is more suitable. "
+      text += "Given that the outer loop relation is relatively small and all tuples with the same join attribute values cannot fit in memory, doing nested loop join will be more cost efficient than merge join. "
 
-      #case #3: merge Join over Hash Join
-      if node_aqp.node_type == "Hash Join" and node_qep.node_type == "Merge Join":
-        text += f"{node_aqp.node_type} in AQP on relation {node_aqp.relation_name} has now transformed to {node_qep.node_type} in QEP on relation {node_qep.relation_name}. "
-        text += "Given that the hash table does not fit in the memory, hash join becomes dramatically slower as several loops are required. "
-        text += "Hence, merge join is chosen over hash join."
+    #case #3: merge Join over Hash Join
+    if node_aqp.node_type == "Hash Join" and node_qep.node_type == "Merge Join":
+      text += f"{node_aqp.node_type} in AQP on relation {node_aqp.relation_name} has now transformed to {node_qep.node_type} in QEP on relation {node_qep.relation_name}. "
+      text += "Given that the hash table does not fit in the memory, hash join becomes dramatically slower as several loops are required. "
+      text += "Hence, merge join is chosen over hash join."
 
-      #case #4: hash join over merge join
-      if node_aqp.node_type == "Merge Join" and node_qep.node_type == "Hash Join":
-        text += f"{node_aqp.node_type} in AQP on relation {node_aqp.relation_name} has now transformed to {node_qep.node_type} in QEP on relation {node_qep.relation_name}. "
-        text += "Hash table can fit in memory, which lowers the cost of hash join. In addition, sorting the operands first will result in a higher cost. Hence, hash join is chosen over merge join."
-      #case #5: Hash Join over nested loop
-      if node_aqp.node_type == "Nested Loop" and node_qep.node_type == "Hash Join":
-        text += f"{node_aqp.node_type} in AQP on relation {node_aqp.relation_name} has now transformed to {node_qep.node_type} in QEP on relation {node_qep.relation_name}. "
-        if "=" in node_qep.node_type:
-          text += "The join condition is performed with an equality operator. Hence, nested loop join is the least efficient out of the three algorithm. "
-        text += "Hash table can fit in memory, which lowers the cost of hash join. Hence, hash join is chosen over nested loop join."
+    #case #4: hash join over merge join
+    if node_aqp.node_type == "Merge Join" and node_qep.node_type == "Hash Join":
+      text += f"{node_aqp.node_type} in AQP on relation {node_aqp.relation_name} has now transformed to {node_qep.node_type} in QEP on relation {node_qep.relation_name}. "
+      text += "Hash table can fit in memory, which lowers the cost of hash join. In addition, sorting the operands first will result in a higher cost. Hence, hash join is chosen over merge join."
+    #case #5: Hash Join over nested loop
+    if node_aqp.node_type == "Nested Loop" and node_qep.node_type == "Hash Join":
+      text += f"{node_aqp.node_type} in AQP on relation {node_aqp.relation_name} has now transformed to {node_qep.node_type} in QEP on relation {node_qep.relation_name}. "
+      if "=" in node_qep.node_type:
+        text += "The join condition is performed with an equality operator. Hence, nested loop join is the least efficient out of the three algorithm. "
+      text += "Hash table can fit in memory, which lowers the cost of hash join. Hence, hash join is chosen over nested loop join."
 
-      #case #6: nested loop over hash join
-      if node_aqp.node_type == "Hash Join" and node_qep.node_type == "Nested Loop":
-        text += f"{node_aqp.node_type} in AQP on relation {node_aqp.relation_name} has now transformed to {node_qep.node_type} in QEP on relation {node_qep.relation_name}. "
-        if "=" in node_qep.node_type:
-          text += "The join condition is performed with an equality operator. "
-        else:
-          text += "The join condition is not an equality operator, hence Nested Loop Join is more suitable. "
-        text += "One of the operand has very few rows. Hence, nested loop join is more cost efficient, while saving on the set up cost."
+    #case #6: nested loop over hash join
+    if node_aqp.node_type == "Hash Join" and node_qep.node_type == "Nested Loop":
+      text += f"{node_aqp.node_type} in AQP on relation {node_aqp.relation_name} has now transformed to {node_qep.node_type} in QEP on relation {node_qep.relation_name}. "
+      if "=" in node_qep.node_type:
+        text += "The join condition is performed with an equality operator. "
+      else:
+        text += "The join condition is not an equality operator, hence Nested Loop Join is more suitable. "
+      text += "One of the operand has very few rows. Hence, nested loop join is more cost efficient, while saving on the set up cost."
 
   
   # elif node_aqp.node_type and node_qep.node_type in ['Merge Join', "Hash Join", "Nested Loop"]:
@@ -504,7 +504,7 @@ def generate_node_diff_reason(node_aqp, node_qep, diff_idx):
   #       text += f"The actual row count returned decreases from {node_aqp.actual_rows} to {node_qep.actual_rows}. "
   #     text += "Both sides of the Join operator in QEP can be sorted on the join condition efficiently. "
 
-  # return text
+  return text
 
 
 def reset_vars():
