@@ -185,7 +185,7 @@ def convert_qp_to_text(node, skip=False):
 
   if increment: #current node is a intermediate table
     node.write_qep_output_name("T" + str(cur_table_name))  #renaming to T1, T2 for intermediate table
-    step += "to get intermediate table " + node.read_qep_output_name()
+    step += f"to get intermediate table {node.read_qep_output_name()} "
     cur_table_name += 1
   if node.subplan_name:
     table_subquery_name_pair[node.subplan_name] = node.read_qep_output_name()
@@ -214,9 +214,9 @@ def extract_qep_conditions(op_name, conditions, table_subquery_name_pair):
     return conditions[1:-1]
   cond = ""
   for i in range(len(conditions)): #if conditions is an array of strings
-    cond = cond + conditions[i] #add to cond string
+    cond += conditions[i] #add to cond string
     if (not (i == len(conditions) - 1)): #not at the last element
-      cond = cond + "and"
+      cond += " and "
   return cond
 
 
