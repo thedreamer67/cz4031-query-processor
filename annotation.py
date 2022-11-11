@@ -36,8 +36,8 @@ def convert_qp_to_text(node, skip=False):
   """
   This function converts the QP node to text, based on a set of rules which have been pre-determined
   Args:
-      node (Node): Node of the QP
-      skip (bool, optional): Skip processing of current node (default is false)
+    node (Node): Node of the QP
+    skip (bool, optional): Skip processing of current node (default is false)
   """
 
   global steps, cur_step, cur_table_name
@@ -201,11 +201,11 @@ def convert_qp_to_text(node, skip=False):
 def extract_qep_conditions(op_name, conditions, table_subquery_name_pair):
   """
   Args:
-      op_name (string): Name of the operation - Sort, Join, etc.
-      conditions (dynamic): Attribute to filter upon. This can be a key or a operation condition of a node
-      table_subquery_name_pair ([type]): [description]
+    op_name (string): Name of the operation - Sort, Join, etc.
+    conditions (dynamic): Attribute to filter upon. This can be a key or a operation condition of a node
+    table_subquery_name_pair ([type]): [description]
   Returns:
-      string : Explanation for the condition to be met
+    string : Explanation for the condition to be met
   """
 
   if isinstance(conditions, str): #if conditions is string type
@@ -224,10 +224,10 @@ def compare_children_nodes(nodeAQP, nodeQEP, difference, reasons):
   """
   This function recursively traveses both plan trees and compares the corresponding nodes 
   Args:
-      nodeAQP (Node): AQP node
-      nodeQEP (Node): QEP node
-      difference (string): Structural difference between two nodes
-      reasons (string): Explanation for difference between the nodes
+    nodeAQP (Node): AQP node
+    nodeQEP (Node): QEP node
+    difference (string): Structural difference between two nodes
+    reasons (string): Explanation for difference between the nodes
   """
   # print(f"comparing children nodes AQP.{nodeAQP.node_type} and QEP.{nodeQEP.node_type}")
   global diff_idx #keeps track of the count of differences found
