@@ -82,50 +82,50 @@ class QueryPlans:
   def generateQEP(self):
     return self.connection.execute(f"EXPLAIN (format json) {self.sql_query}")
 
-  # def generateAQPs(self, qep_node_types):
-  #   aqps = []
-  #   prev_condition = None
-  #   for nt in qep_node_types:
-  #     if nt == "Nested Loop":
-  #       condition = "enable_nestloop"
-  #     elif nt == "Seq Scan":
-  #       condition = "enable_seqscan"
-  #     elif nt == "Index Scan":
-  #       condition = "enable_indexscan"
-  #     elif nt == "Bitmap Index Scan" or nt == "Bitmap Heap Scan":
-  #       condition = "enable_bitmapscan"
-  #     elif nt == "Hash Join":
-  #       condition = "enable_hashjoin"
-  #     elif nt == "Merge Join":
-  #       condition = "enable_mergejoin"
-  #     if prev_condition:
-  #       aqps.append(self.connection.execute(f"set {prev_condition} = 'on'; set {condition} = 'off'; EXPLAIN (format json) {self.sql_query}"))
-  #     else:
-  #       aqps.append(self.connection.execute(f"set {condition} = 'off'; EXPLAIN (format json) {self.sql_query}"))
-  #     prev_condition = condition
-  #   return aqps
-
   def generateAQPs(self, qep_node_types):
     aqps = []
-    conditions =[]
+    prev_condition = None
     for nt in qep_node_types:
       if nt == "Nested Loop":
-        conditions.append("enable_nestloop")
+        condition = "enable_nestloop"
       elif nt == "Seq Scan":
-        conditions.append("enable_seqscan")
+        condition = "enable_seqscan"
       elif nt == "Index Scan":
-        conditions.append("enable_indexscan")
+        condition = "enable_indexscan"
       elif nt == "Bitmap Index Scan" or nt == "Bitmap Heap Scan":
-        conditions.append("enable_bitmapscan")
+        condition = "enable_bitmapscan"
       elif nt == "Hash Join":
-        conditions.append("enable_hashjoin")
+        condition = "enable_hashjoin"
       elif nt == "Merge Join":
-        conditions.append("enable_mergejoin")
-    disable_str = ""
-    for cond in conditions:
-      disable_str += f"set {cond} = 'off'; "
-    aqps.append(self.connection.execute(disable_str+f" EXPLAIN (format json) {self.sql_query}"))
+        condition = "enable_mergejoin"
+      if prev_condition:
+        aqps.append(self.connection.execute(f"set {prev_condition} = 'on'; set {condition} = 'off'; EXPLAIN (format json) {self.sql_query}"))
+      else:
+        aqps.append(self.connection.execute(f"set {condition} = 'off'; EXPLAIN (format json) {self.sql_query}"))
+      prev_condition = condition
     return aqps
+
+  # def generateAQPs(self, qep_node_types):
+  #   aqps = []
+  #   conditions =[]
+  #   for nt in qep_node_types:
+  #     if nt == "Nested Loop":
+  #       conditions.append("enable_nestloop")
+  #     elif nt == "Seq Scan":
+  #       conditions.append("enable_seqscan")
+  #     elif nt == "Index Scan":
+  #       conditions.append("enable_indexscan")
+  #     elif nt == "Bitmap Index Scan" or nt == "Bitmap Heap Scan":
+  #       conditions.append("enable_bitmapscan")
+  #     elif nt == "Hash Join":
+  #       conditions.append("enable_hashjoin")
+  #     elif nt == "Merge Join":
+  #       conditions.append("enable_mergejoin")
+  #   disable_str = ""
+  #   for cond in conditions:
+  #     disable_str += f"set {cond} = 'off'; "
+  #   aqps.append(self.connection.execute(disable_str+f" EXPLAIN (format json) {self.sql_query}"))
+  #   return aqps
 
   def extract_qp_data(self, json_obj):
     """
