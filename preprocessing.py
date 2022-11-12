@@ -75,7 +75,8 @@ class Node(object):
 
 class QueryPlans:
   def __init__(self, sql_query):
-    self.connection = Database("localhost", 5432, "postgres", "postgres", "password")
+    config_dict = config()
+    self.connection = Database(host = config_dict['host'], port=config_dict['port'], database = config_dict['database'], user = config_dict['user'], password=config_dict['password'])
     self.sql_query = sql_query
   
   def generateQEP(self):
