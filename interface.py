@@ -37,8 +37,6 @@ st.subheader('Enter your query input')
 
 input_text = st.text_area('Enter query', height=300, label_visibility='collapsed')
 
-flag = True
-
 with st.sidebar:
     st.title('Enter Your Credentials')
     user = st.text_input("User:", value="")
@@ -78,13 +76,17 @@ if st.button('Execute'):
         left_node = [True]  # First node Will come on left side of the graph
 
         list_nodes, left_node = preprocessing.stringProcess(list_nodes, left_node) 
-
+        print(list_nodes)
+        print(left_node)
         qp = preprocessing.QueryPlans(input_text)
         qep = qp.generateQEP()
         json_qep = json.loads(json.dumps(qep[0][0]))
         n1, nodetypes = qp.extract_qp_data(json_qep)
 
         aqps = qp.generateAQPs(nodetypes)
+
+        flag = True
+        diff_str_flag = ""
 
         for i, nt in enumerate(nodetypes):
             print(f"Comparing QEP and AQP {i+1}")
@@ -101,7 +103,6 @@ if st.button('Execute'):
 
 
             diff_str = annotation.compare_two_plans(root_node_qep, root_node_aqp)
-            diff_str_flag = ""
 
             if diff_str == "":
                 diff_str = f"QEP and this generated AQP ({i+1}) are the same as the node type that we tried to exclude ({nt}) must be used (no other alternative available)"
@@ -111,11 +112,13 @@ if st.button('Execute'):
 
             print(diff_str+"\n")
 
-        if flag:
-            st.text(diff_str)
-        else:
-            st.text(diff_str_flag)
-
         plot0 = annotation.show_graph(list_nodes, left_node)
         st.pyplot(plot0)
+        st.subheader("Difference with Alternate Query Plan")
+        if flag == True:
+            st.text(diff_str)
+        else:
+            text = diff_str_flag.split("\n")
+            for i in range(len(text)):
+                st.write(text[i])
 
