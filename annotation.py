@@ -600,5 +600,11 @@ def show_graph(list_nodes, col_level):
         i += 1
 
     plt.axis('off')
+    # Add a legend to the graph
+    from matplotlib.patches import Patch
+    legend_elements = [Patch(facecolor='#F391A0', edgecolor='black',label='Scan'),
+                   Patch(facecolor='#F5B700', edgecolor='black',label='Join'),
+                   Patch(facecolor='#8EEDF7', edgecolor='black',label='Other')]
+    ax.legend(handles=legend_elements, loc='lower right')
     plot0 = plot0.figure
     return plot0  #
