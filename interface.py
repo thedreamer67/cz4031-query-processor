@@ -21,6 +21,10 @@ if st.button('Execute'):
 
         result = preprocessing.explainQuery(input_text,format='text')
         print("result =\n", result)
+        # In case connection with database fails (Display message)
+        if(result[0] == 'Connection Error'):
+            st.text('Database Error. Please update database.ini and check if your query is correct syntax')
+            raise Exception("Database Error. Please update database.ini and check if your query is correct syntax")
 
         # Splitting string on new line
         list_nodes = result.split("\n")
