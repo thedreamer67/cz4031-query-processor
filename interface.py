@@ -39,6 +39,7 @@ input_text = st.text_area('Enter query', height=300, label_visibility='collapsed
 
 with st.sidebar:
     st.title('Enter Your Credentials')
+    db = st.text_input("Database Name:", value="")
     user = st.text_input("User:", value="")
     pwd = st.text_input("Password:", value="", type="password")
     if st.button('Login'):
@@ -49,6 +50,8 @@ with st.sidebar:
         # update existing value
         config.set('postgresql', 'password', pwd)
         config.set('postgresql', 'user', user)
+        config.set('postgresql', 'database', db)
+
 
         # save to a file
         with open('database.ini', 'w') as configfile:
