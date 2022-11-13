@@ -124,6 +124,13 @@ if st.button('Execute'):
 
         plot0 = annotation.show_graph(list_nodes, left_node)
         st.pyplot(plot0)
+
+        #NEW#
+        st.subheader("Walking Through Query Execution Plan")
+        steps = annotation.get_qp_steps(n1)
+        for step in steps:
+            st.write(step)
+
         st.subheader("Difference with Alternate Query Plan")
         if flag == True:
             st.text(diff_str)
