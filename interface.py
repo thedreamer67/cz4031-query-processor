@@ -68,12 +68,16 @@ with st.sidebar:
 if st.button('Execute'):
     with st.spinner('Loading...'):
         st.subheader('Query Visualization')
-
+ 
         result = preprocessing.explainQuery(input_text,format='text')
         print("result =\n", result)
 
-        # Splitting string on new line
-        list_nodes = result.split("\n")
+        try:
+            # Splitting string on new line
+            list_nodes = result.split("\n")
+        except Exception as e:
+            st.text('Database Error! Please check login and query Syntax')
+            raise Exception('Database Error! Please check login and query Syntax')
 
         # Deciding which nodes will go on the left side of the graph (Assuming that it would always be a left deep tree)
         left_node = [True]  # First node Will come on left side of the graph
