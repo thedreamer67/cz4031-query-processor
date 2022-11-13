@@ -543,7 +543,7 @@ def _get_color(node_str:str) -> str:
     """Returns the color of the node based on its content"""
     if 'Scan' in node_str:
         return '#F391A0'
-    elif 'Join' in node_str:
+    elif 'Join' in node_str or 'Nested Loop' in node_str:
         return '#F5B700'
     else:
         return '#8EEDF7'
