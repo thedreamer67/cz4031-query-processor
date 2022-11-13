@@ -126,10 +126,13 @@ if st.button('Execute'):
         st.pyplot(plot0)
 
         #NEW#
-        st.subheader("Walking Through Query Execution Plan")
-        steps = annotation.get_qp_steps(n1)
-        for step in steps:
-            st.write(step)
+        try:
+            st.subheader("Walking Through Query Execution Plan")
+            steps = annotation.get_qp_steps(n1)
+            for step in steps:
+                st.write(step)
+        except:
+            pass
 
         st.subheader("Difference with Alternate Query Plan")
         if flag == True:
