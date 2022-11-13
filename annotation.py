@@ -76,12 +76,12 @@ def convert_qp_to_text(node, skip=False):
       step += "and perform {} on ".format(node.node_type.lower()) #decapitalise
       for i, child in enumerate(node.children):
         if child.node_type == "Hash":
-          child.write_qep_output_name(child.children[0].read_qep_output_name()) #extract the name of the table pass into hash operator
-          hashed_table = child.read_qep_output_name() #extract the name of the table being hashed
+          child.write_qp_output_name(child.children[0].read_qp_output_name()) #extract the name of the table pass into hash operator
+          hashed_table = child.read_qp_output_name() #extract the name of the table being hashed
         if i < len(node.children) - 1: #not last child
-          step += (f"table {child.read_qep_output_name()} ") #extracting name of table
+          step += (f"table {child.read_qp_output_name()} ") #extracting name of table
         else: #last child
-          step+= (f"and table {child.read_qep_output_name()} ")
+          step+= (f"and table {child.read_qp_output_name()} ")
       step = "hash table {} {} under condition {} ".format(hashed_table, step, extract_qep_conditions("Hash Cond", node.hash_condition, table_subquery_name_pair))
         #i.e. hash the table (hashed table) and perform join on (listing all child tables) under condition of (hash condition)
 
@@ -90,32 +90,32 @@ def convert_qp_to_text(node, skip=False):
       any_sort = False  # Flag to indicate if sorting has been performed on child
       for i, child in enumerate(node.children):
         if child.node_type == "Sort": #child operator was a sort operation. hence table has been sorted
-          child.write_qep_output_name(child.children[0].read_qep_output_name()) #update child's output name with the name of the table pass into sort operator
+          child.write_qp_output_name(child.children[0].read_qp_output_name()) #update child's output name with the name of the table pass into sort operator
           any_sort = True #indicate that sorting has been done
         if i < len(node.children) - 1: #not last table
-          step += (f"table {child.read_qep_output_name()} ")
+          step += (f"table {child.read_qp_output_name()} ")
         else: #last table
-          step += (f"and table {child.read_qep_output_name()} ")
+          step += (f"and table {child.read_qp_output_name()} ")
       # combining sort with merge if table has been sorted
       if any_sort: #some tables have been sorted
         sort_step = "sort "
         for child in node.children:
           if child.node_type == "Sort": #find which tables have been sorted and insert into sort step
             if i < len(node.children) - 1: ##not last table
-              sort_step += (f"table {child.read_qep_output_name()} ")
+              sort_step += (f"table {child.read_qp_output_name()} ")
             else:
-              sort_step += (f"and table {child.read_qep_output_name()} ")
+              sort_step += (f"and table {child.read_qp_output_name()} ")
 
         step = f"{sort_step} and {step} " #if any_sort == false, then no step will just remain as is without the sort_step part added
 
   elif node.node_type == "Bitmap Heap Scan":
     # combine bitmap heap scan and bitmap index scan
     if "Bitmap Index Scan" in node.children[0].node_type:
-      node.children[0].write_qep_output_name(node.relation_name)
+      node.children[0].write_qp_output_name(node.relation_name)
       step = "with index condition {} ".format(extract_qep_conditions("Recheck Cond", node.recheck_condition,table_subquery_name_pair))
       ## extract index condition
 
-    step = f"perform bitmap heap scan on table {node.children[0].read_qep_output_name()} {step} " #join the bitmap heapscan with table name and index condition
+    step = f"perform bitmap heap scan on table {node.children[0].read_qp_output_name()} {step} " #join the bitmap heapscan with table name and index condition
 
   elif "Scan" in node.node_type: #node_type is a string
     if node.node_type == "Seq Scan":
@@ -123,7 +123,7 @@ def convert_qp_to_text(node, skip=False):
     else:
       step += f"perform {node.node_type.lower()} on table "
 
-    step += node.read_qep_output_name() #extract table name, the scan was perform on
+    step += node.read_qp_output_name() #extract table name, the scan was perform on
 
     if not node.table_filter:
       increment = False
@@ -131,50 +131,50 @@ def convert_qp_to_text(node, skip=False):
   elif node.node_type == "Unique": #extracting unique values from table
     # combine unique and sort
     if "Sort" in node.children[0].node_type: #unique operator has child sort operator
-      node.children[0].write_qep_output_name(
-        node.children[0].children[0].read_qep_output_name()) #extract the table name before sort
-      step = f"sort {node.children[0].read_qep_output_name()} " #extract the table name to be sorted
+      node.children[0].write_qp_output_name(
+        node.children[0].children[0].read_qp_output_name()) #extract the table name before sort
+      step = f"sort {node.children[0].read_qp_output_name()} " #extract the table name to be sorted
       if node.children[0].sort_key: #key value the table is sorted on
         step += "with attribute {} and ".format(extract_qep_conditions("Sort Key", node.children[0].sort_key, table_subquery_name_pair))
       else: #no sort key
         step += "and "
-    step += f"select unique tuples from table {node.children[0].read_qep_output_name()} "
+    step += f"select unique tuples from table {node.children[0].read_qp_output_name()} "
 
   elif node.node_type == "Aggregate": #max, sum, avg etc.
     for child in node.children:
       # combine aggregate and sort
       if "Sort" in child.node_type:
-        child.write_qep_output_name(child.children[0].read_qep_output_name()) #extract name of table for sorting
-        step = f"sort {node.children[0].read_qep_output_name()} and "
+        child.write_qp_output_name(child.children[0].read_qp_output_name()) #extract name of table for sorting
+        step = f"sort {node.children[0].read_qp_output_name()} and "
       # combine aggregate and scan
       if "Scan" in child.node_type:
         if child.node_type == "Seq Scan":
-          step = f"perform sequential scan on {child.read_qep_output_name()} and "
+          step = f"perform sequential scan on {child.read_qp_output_name()} and "
         else:
-          step = f"perform {child.node_type.lower()} on {child.read_qep_output_name()} and "
+          step = f"perform {child.node_type.lower()} on {child.read_qp_output_name()} and "
     
-    step += f"perform aggregate on table {node.children[0].read_qep_output_name()}"
+    step += f"perform aggregate on table {node.children[0].read_qp_output_name()}"
     ## IMPROVEMENT: is there a way to find which aggregate function is used, and which column is used
 
     if len(node.children) == 2: #max of 2 children for aggregate function
-      step += f"and table {node.children[1].read_qep_output_name()} "
+      step += f"and table {node.children[1].read_qp_output_name()} "
 
   elif node.node_type == "Sort":
-    step+= "perform sort on table {} with {} ".format(node.children[0].read_qep_output_name(), extract_qep_conditions("Sort Key", node.sort_key, table_subquery_name_pair))
+    step+= "perform sort on table {} with {} ".format(node.children[0].read_qp_output_name(), extract_qep_conditions("Sort Key", node.sort_key, table_subquery_name_pair))
 
   elif node.node_type == "Limit": #how many rows to extract
-    step += f"limit the result from table {node.children[0].read_qep_output_name()} to {node.plan_rows} record(s) "
+    step += f"limit the result from table {node.children[0].read_qp_output_name()} to {node.plan_rows} record(s) "
   
   else:
     step += f"perform {node.node_type.lower()} on "
     if len(node.children) > 1: #more than one child
       for i, child in enumerate(node.children):
         if i < len(node.children) - 1:
-          step += (f"table {child.read_qep_output_name()} ")
+          step += (f"table {child.read_qp_output_name()} ")
         else:
-          step += (f"and table {child.read_qep_output_name()} ")
+          step += (f"and table {child.read_qp_output_name()} ")
     else: #only one child
-      step+= f"table {node.children[0].read_qep_output_name()} "
+      step+= f"table {node.children[0].read_qp_output_name()} "
   
   if node.group_key: #if there is a "group_by"
     step += "with grouping on attribute {} ".format(extract_qep_conditions("Group Key", node.group_key, table_subquery_name_pair))
@@ -184,11 +184,11 @@ def convert_qp_to_text(node, skip=False):
     step += "while filtering on {} ".format(extract_qep_conditions("Join Filter", node.join_filter, table_subquery_name_pair))
 
   if increment: #current node is a intermediate table
-    node.write_qep_output_name("T" + str(cur_table_name))  #renaming to T1, T2 for intermediate table
-    step += f"to get intermediate table {node.read_qep_output_name()} "
+    node.write_qp_output_name("T" + str(cur_table_name))  #renaming to T1, T2 for intermediate table
+    step += f"to get intermediate table {node.read_qp_output_name()} "
     cur_table_name += 1
   if node.subplan_name:
-    table_subquery_name_pair[node.subplan_name] = node.read_qep_output_name()
+    table_subquery_name_pair[node.subplan_name] = node.read_qp_output_name()
 
   node.update_desc(step) #shows what is being done at this node
   step = f"\nStep {cur_step}, {step}. " #join step description with Step count
