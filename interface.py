@@ -92,28 +92,31 @@ if st.button('Execute'):
         diff_str_flag = ""
 
         for i, nt in enumerate(nodetypes):
-            print(f"Comparing QEP and AQP {i+1}")
-            json_aqp = json.loads(json.dumps(aqps[i][0][0]))
+            try:
+                print(f"Comparing QEP and AQP {i+1}")
+                json_aqp = json.loads(json.dumps(aqps[i][0][0]))
 
-            print("QEP")
-            print(json_qep)
-            print("AQP")
-            print(json_aqp)
-
-
-            root_node_qep, _ = qp.extract_qp_data(json_qep)
-            root_node_aqp, _ = qp.extract_qp_data(json_aqp)
+                print("QEP")
+                print(json_qep)
+                print("AQP")
+                print(json_aqp)
 
 
-            diff_str = annotation.compare_two_plans(root_node_qep, root_node_aqp)
+                root_node_qep, _ = qp.extract_qp_data(json_qep)
+                root_node_aqp, _ = qp.extract_qp_data(json_aqp)
 
-            if diff_str == "":
-                diff_str = f"QEP and this generated AQP ({i+1}) are the same as the node type that we tried to exclude ({nt}) must be used (no other alternative available)"
-            else:
-                flag = False
-                diff_str_flag = diff_str
 
-            print(diff_str+"\n")
+                diff_str = annotation.compare_two_plans(root_node_qep, root_node_aqp)
+
+                if diff_str == "":
+                    diff_str = f"QEP and this generated AQP ({i+1}) are the same as the node type that we tried to exclude ({nt}) must be used (no other alternative available)"
+                else:
+                    flag = False
+                    diff_str_flag = diff_str
+
+                print(diff_str+"\n")
+            except:
+                pass
 
         plot0 = annotation.show_graph(list_nodes, left_node)
         st.pyplot(plot0)
