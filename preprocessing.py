@@ -84,6 +84,7 @@ class QueryPlans:
 
   def generateAQPs(self, qep_node_types):
     aqps = []
+    condition = None
     prev_condition = None
     for nt in qep_node_types:
       if nt == "Nested Loop":
