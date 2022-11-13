@@ -99,11 +99,13 @@ class QueryPlans:
         condition = "enable_hashjoin"
       elif nt == "Merge Join":
         condition = "enable_mergejoin"
-      if prev_condition:
+      if prev_condition and condition:
         aqps.append(self.connection.execute(f"set {prev_condition} = 'on'; set {condition} = 'off'; EXPLAIN (format json) {self.sql_query}"))
-      else:
+        prev_condition = condition
+      elif condition:
         aqps.append(self.connection.execute(f"set {condition} = 'off'; EXPLAIN (format json) {self.sql_query}"))
-      prev_condition = condition
+        prev_condition = condition
+        
     return aqps
 
   # def generateAQPs(self, qep_node_types):

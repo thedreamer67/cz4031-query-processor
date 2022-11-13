@@ -68,12 +68,16 @@ with st.sidebar:
 if st.button('Execute'):
     with st.spinner('Loading...'):
         st.subheader('Query Visualization')
-
+ 
         result = preprocessing.explainQuery(input_text,format='text')
         print("result =\n", result)
 
-        # Splitting string on new line
-        list_nodes = result.split("\n")
+        try:
+            # Splitting string on new line
+            list_nodes = result.split("\n")
+        except Exception as e:
+            st.text('Database Error! Please check login and query Syntax')
+            raise Exception('Database Error! Please check login and query Syntax')
 
         # Deciding which nodes will go on the left side of the graph (Assuming that it would always be a left deep tree)
         left_node = [True]  # First node Will come on left side of the graph
@@ -92,31 +96,44 @@ if st.button('Execute'):
         diff_str_flag = ""
 
         for i, nt in enumerate(nodetypes):
-            print(f"Comparing QEP and AQP {i+1}")
-            json_aqp = json.loads(json.dumps(aqps[i][0][0]))
+            try:
+                print(f"Comparing QEP and AQP {i+1}")
+                json_aqp = json.loads(json.dumps(aqps[i][0][0]))
 
-            print("QEP")
-            print(json_qep)
-            print("AQP")
-            print(json_aqp)
-
-
-            root_node_qep, _ = qp.extract_qp_data(json_qep)
-            root_node_aqp, _ = qp.extract_qp_data(json_aqp)
+                print("QEP")
+                print(json_qep)
+                print("AQP")
+                print(json_aqp)
 
 
-            diff_str = annotation.compare_two_plans(root_node_qep, root_node_aqp)
+                root_node_qep, _ = qp.extract_qp_data(json_qep)
+                root_node_aqp, _ = qp.extract_qp_data(json_aqp)
 
-            if diff_str == "":
-                diff_str = f"QEP and this generated AQP ({i+1}) are the same as the node type that we tried to exclude ({nt}) must be used (no other alternative available)"
-            else:
-                flag = False
-                diff_str_flag = diff_str
 
-            print(diff_str+"\n")
+                diff_str = annotation.compare_two_plans(root_node_qep, root_node_aqp)
+
+                if diff_str == "":
+                    diff_str = f"QEP and this generated AQP ({i+1}) are the same as the node type that we tried to exclude ({nt}) must be used (no other alternative available)"
+                else:
+                    flag = False
+                    diff_str_flag = diff_str
+
+                print(diff_str+"\n")
+            except:
+                pass
 
         plot0 = annotation.show_graph(list_nodes, left_node)
         st.pyplot(plot0)
+
+        #NEW#
+        try:
+            st.subheader("Walking Through Query Execution Plan")
+            steps = annotation.get_qp_steps(n1)
+            for step in steps:
+                st.write(step)
+        except:
+            pass
+
         st.subheader("Difference with Alternate Query Plan")
         if flag == True:
             st.text(diff_str)

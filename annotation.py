@@ -197,6 +197,16 @@ def convert_qp_to_text(node, skip=False):
 
   steps.append(step) #recursive function, return control to parent node
 
+def get_qp_steps(root_node):
+  """
+  This function converts the QP node to a list of step, utilising the convert_qp_to_text function
+  Args:
+    node (Node): Node of the QP
+  Returns:
+    string[] : list of steps taken by query processor
+  """
+  convert_qp_to_text(root_node)
+  return steps
 
 def extract_qep_conditions(op_name, conditions, table_subquery_name_pair):
   """

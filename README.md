@@ -21,4 +21,4 @@ pip install config
 
 ## Running Streamlit Application
 ```
-streamlit run interface.py
+streamlit run project.py
